@@ -91,7 +91,6 @@ function generateCities() {
             let h = heightMap[y][x];
             if (h < 0.02 || h > 0.25) { tries++; continue; }
 
-            // 附近是否为海或河（靠海）
             let nearSea = false;
             for (let dx = -12; dx <= 12; dx++) {
                 for (let dy = -12; dy <= 12; dy++) {
@@ -188,7 +187,7 @@ function drawRoads() {
     });
 }
 
-// ===== 渲染与主流程 =====
+// ===== 主流程入口绑定 =====
 function generateMap() {
     mapSize = Number(document.getElementById("mapSize").value);
     canvas.width = canvas.height = mapSize;
@@ -200,4 +199,35 @@ function generateMap() {
     drawRoads();
 
     nationData.name = document.getElementById("nationName").value || "未命名国家";
-    nationData.population = Math.floor((cities.length * 300000) + Math.random() *
+    nationData.population = Math.floor((cities.length * 300000) + Math.random() * 300000);
+}
+
+window.onload = () => {
+    document.getElementById("generateBtn").addEventListener("click", generateMap);
+    document.getElementById("regenBtn").addEventListener("click", () => {
+        generateHeightMap();
+        renderHeightMap();
+        generateCities();
+        drawCities();
+        generateRoads();
+        drawRoads();
+    });
+
+    document.getElementById("reportBtn").addEventListener("click", () => {
+        const reportBox = document.getElementById("reportBox");
+        reportBox.innerHTML = `
+          <h2>${nationData.name}</h2>
+          <p>人口：${nationData.population.toLocaleString()}人</p>
+          <p>城市数量：${cities.length}个</p>
+          <p>道路数量：${roads.length}条</p>
+        `;
+        reportBox.style.display = "block";
+    });
+
+    document.getElementById("saveBtn").addEventListener("click", () => {
+        const link = document.createElement("a");
+        link.download = `${nationData.name}.png`;
+        link.href = canvas.toDataURL();
+        link.click();
+    });
+};
