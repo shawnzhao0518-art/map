@@ -1,0 +1,83 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+}
+
+body {
+    background: linear-gradient(135deg, #dce3f7, #f8fbff);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+}
+
+.container {
+    display: flex;
+    width: 100%;
+    height: 100vh;
+}
+
+.sidebar {
+    width: 280px;
+    padding: 20px;
+    overflow-y: auto;
+}
+
+.main {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.glass {
+    background: rgba(255, 255, 255, 0.45);
+    backdrop-filter: blur(15px);
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+}
+
+.sidebar input,
+.sidebar select {
+    width: 100%;
+    padding: 8px 12px;
+    border-radius: 12px;
+    border: none;
+    margin: 6px 0 15px 0;
+    background: rgba(255,255,255,0.8);
+}
+
+.sidebar button {
+    width: 100%;
+    padding: 12px;
+    margin-top: 10px;
+    border: none;
+    border-radius: 15px;
+    background: #3c70ff;
+    color: white;
+    font-size: 15px;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.sidebar button:hover {
+    opacity: 0.85;
+}
+
+#mapCanvas {
+    border-radius: 20px;
+    max-width: 95%;
+    max-height: 95%;
+}
+
+.report {
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    width: 420px;
+    height: 430px;
+    padding: 20px;
+    overflow-y: auto;
+    display: none;
+}
