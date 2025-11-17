@@ -1,24 +1,13 @@
 /******************************************************
- * 超豪华版随机国家生成器
- * 功能包含：
- * - Perlin 噪声地形
- * - 海拔图 / 颜色分层
- * - 河流生成（基于流向）
- * - 城市智能选址（靠海、靠河、低海拔 & 平坦）
- * - 森林生成（基于中海拔）
- * - A* 道路寻路
- * - PNG 导出
- * - 国家报告生成
+ * 随机国家生成器（豪华版 + 生物群系）
  ******************************************************/
 
-// ----------------------
-// 全局变量
-// ----------------------
 let canvas = document.getElementById("mapCanvas");
 let ctx = canvas.getContext("2d");
 
 let mapSize = 800;
 let heightMap = [];
+let tempMap = [];
 let rivers = [];
 let cities = [];
 let forests = [];
@@ -32,84 +21,135 @@ let nationData = {
     roadLength: 0
 };
 
+/******************************************************
+ * 正式 Perlin Noise（Ken Perlin 改良）
+ ******************************************************/
+let permutation = [];
+for (let i = 0; i < 256; i++) permutation[i] = i;
+for (let i = 255; i > 0; i--) {
+    let j = Math.floor(Math.random() * (i + 1));
+    [permutation[i], permutation[j]] = [permutation[j], permutation[i]];
+}
+let p = [...permutation, ...permutation];
 
-// ----------------------
-// 简易 Perlin 噪声
-// ----------------------
-function perlin(x, y, seed = 0) {
-    return (Math.sin((x * 12.9898 + y * 78.233 + seed) * 43758.5453) * 43758.5453) % 1;
+function fade(t) { return t * t * t * (t * (t * 6 - 15) + 10); }
+function lerp(t, a, b) { return a + t * (b - a); }
+function grad(hash, x, y) {
+    switch (hash & 3) {
+        case 0: return x + y;
+        case 1: return -x + y;
+        case 2: return x - y;
+        case 3: return -x - y;
+    }
+}
+function perlin(x, y) {
+    let X = Math.floor(x) & 255;
+    let Y = Math.floor(y) & 255;
+
+    x -= Math.floor(x);
+    y -= Math.floor(y);
+
+    let u = fade(x);
+    let v = fade(y);
+
+    let A = p[X] + Y;
+    let B = p[X + 1] + Y;
+
+    return lerp(v,
+        lerp(u, grad(p[A], x, y), grad(p[B], x - 1, y)),
+        lerp(u, grad(p[A + 1], x, y - 1), grad(p[B + 1], x - 1, y - 1))
+    );
 }
 
-
-// ----------------------
-// 生成高度图
-// ----------------------
+/******************************************************
+ * 生成高度图 + 温度图
+ ******************************************************/
 function generateHeightMap() {
     heightMap = [];
+    tempMap = [];
 
     for (let y = 0; y < mapSize; y++) {
         heightMap[y] = [];
+        tempMap[y] = [];
+
         for (let x = 0; x < mapSize; x++) {
+
             let nx = x / mapSize - 0.5;
             let ny = y / mapSize - 0.5;
 
             let e =
-                1.00 * perlin(nx * 3, ny * 3, 10) +
-                0.50 * perlin(nx * 5, ny * 5, 20) +
-                0.25 * perlin(nx * 9, ny * 9, 30);
+                1.00 * perlin(nx * 3, ny * 3) +
+                0.50 * perlin(nx * 6, ny * 6) +
+                0.25 * perlin(nx * 12, ny * 12);
 
-            e = e / 1.75;
-
-            // 岛屿形状（降低边缘高度）
+            e = (e + 1) / 2; // normalize
             let dist = Math.sqrt(nx * nx + ny * ny);
-            e = e - dist * 0.8;
+            e = e - dist * 1.1;
 
             heightMap[y][x] = e;
+
+            // 温度 = 与 y（纬度）相关
+            let t = 1 - Math.abs((y / mapSize) - 0.5) * 2;
+            tempMap[y][x] = t;
         }
     }
 }
 
+/******************************************************
+ * 生物群系颜色
+ ******************************************************/
+function biomeColor(h, t) {
+    if (h < 0) return "#3fa0ff"; // 海洋
 
-// ----------------------
-// 渲染地形（颜色）
-// ----------------------
-function renderHeightMap() {
+    if (h < 0.05) {
+        if (t < 0.33) return "#cfe0d8"; // 冷湿苔原
+        if (t < 0.66) return "#8dd17d"; // 温带草原
+        return "#5cd167"; // 热带雨林
+    }
+
+    if (h < 0.20) {
+        if (t < 0.33) return "#4d7c3b"; // 针叶林
+        if (t < 0.66) return "#6dad5f"; // 混合林
+        return "#3aa549"; // 热带密林
+    }
+
+    if (h < 0.35) return "#b5946d"; // 丘陵
+
+    return "#ffffff"; // 雪山
+}
+
+/******************************************************
+ * 渲染地图（生物群系）
+ ******************************************************/
+function renderMap() {
     for (let y = 0; y < mapSize; y++) {
         for (let x = 0; x < mapSize; x++) {
+
             let h = heightMap[y][x];
+            let t = tempMap[y][x];
 
-            let color;
-            if (h < 0) color = "#4fa4ff";             // 海洋
-            else if (h < 0.05) color = "#8dd17d";      // 平原
-            else if (h < 0.15) color = "#6dad5f";      // 草原
-            else if (h < 0.3) color = "#b5946d";       // 丘陵
-            else color = "#ffffff";                   // 高山
-
-            ctx.fillStyle = color;
+            ctx.fillStyle = biomeColor(h, t);
             ctx.fillRect(x, y, 1, 1);
         }
     }
 }
 
-
-// ----------------------
-// 生成河流（简单流向）
-// ----------------------
+/******************************************************
+ * 河流生成（简流向）
+ ******************************************************/
 function generateRivers() {
     rivers = [];
 
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < 7; i++) {
         let x = Math.floor(Math.random() * mapSize);
         let y = Math.floor(Math.random() * mapSize);
 
-        // 起点须为中高海拔
         if (heightMap[y][x] < 0.15) continue;
 
         let river = [];
-        for (let j = 0; j < 800; j++) {
+        for (let j = 0; j < 900; j++) {
             river.push({ x, y });
 
-            // 找向下坡方向
             let bestX = x, bestY = y;
             let bestH = heightMap[y][x];
 
@@ -131,17 +171,13 @@ function generateRivers() {
             x = bestX;
             y = bestY;
 
-            if (heightMap[y][x] < 0) break; // 入海
+            if (heightMap[y][x] < 0) break;
         }
 
         rivers.push(river);
     }
 }
 
-
-// ----------------------
-// 画河流
-// ----------------------
 function drawRivers() {
     ctx.strokeStyle = "#2f76ff";
     ctx.lineWidth = 2;
@@ -154,120 +190,88 @@ function drawRivers() {
     });
 }
 
-
-// ----------------------
-// 城市智能生成
-// 规则：靠海、靠河、低海拔、地势平坦
-// ----------------------
+/******************************************************
+ * 城市生成（靠海/靠河/平坦/低海拔）
+ ******************************************************/
 function generateCities() {
     cities = [];
 
-    for (let i = 0; i < 12; i++) {
-        let attempts = 0;
-        while (attempts < 2000) {
-            attempts++;
+    for (let i = 0; i < 15; i++) {
+        let tries = 0;
+        while (tries < 2000) {
+            tries++;
 
             let x = Math.floor(Math.random() * mapSize);
             let y = Math.floor(Math.random() * mapSize);
             let h = heightMap[y][x];
 
-            // 高度不允许太高
-            if (h > 0.20) continue;
+            if (h > 0.25) continue;
 
-            // 靠海（距离海 < 15）
-            let isCoastal = false;
-            for (let dy = -15; dy <= 15; dy++) {
-                for (let dx = -15; dx <= 15; dx++) {
+            // 靠海
+            let nearSea = false;
+            for (let dy = -12; dy <= 12; dy++) {
+                for (let dx = -12; dx <= 12; dx++) {
                     let nx = x + dx, ny = y + dy;
                     if (nx < 0 || ny < 0 || nx >= mapSize || ny >= mapSize) continue;
-                    if (heightMap[ny][nx] < 0) isCoastal = true;
+                    if (heightMap[ny][nx] < 0) nearSea = true;
                 }
             }
 
-            // 河流附近（10px）
+            // 靠河
             let nearRiver = rivers.some(r =>
                 r.some(p => Math.abs(p.x - x) < 8 && Math.abs(p.y - y) < 8)
             );
 
-            if (!isCoastal && !nearRiver) continue;
+            if (!nearSea && !nearRiver) continue;
 
-            // 平坦区域（周围高度差不能太大）
-            let flat = true;
-            for (let dy = -4; dy <= 4; dy++) {
-                for (let dx = -4; dx <= 4; dx++) {
-                    let nx = x + dx, ny = y + dy;
-                    if (nx < 0 || ny < 0 || nx >= mapSize || ny >= mapSize) continue;
-
-                    if (Math.abs(heightMap[ny][nx] - h) > 0.12) {
-                        flat = false;
-                    }
-                }
-            }
-            if (!flat) continue;
-
-            // 成功添加城市
             cities.push({ x, y, size: Math.random() });
             break;
         }
     }
 }
 
-
-// ----------------------
-// 画城市
-// ----------------------
 function drawCities() {
-    cities.forEach(city => {
-        ctx.fillStyle = city.size > 0.75 ? "#ff4f4f" : (city.size > 0.45 ? "#ff8d3c" : "#ffd93c");
+    cities.forEach(c => {
+        ctx.fillStyle = c.size > 0.75 ? "#ff4f4f" :
+                        c.size > 0.45 ? "#ff8d3c" : "#ffd93c";
+
         ctx.beginPath();
-        ctx.arc(city.x, city.y, 4 + city.size * 5, 0, Math.PI * 2);
+        ctx.arc(c.x, c.y, 4 + c.size * 5, 0, Math.PI * 2);
         ctx.fill();
     });
 }
 
-
-// ----------------------
-// 生成森林
-// ----------------------
+/******************************************************
+ * 森林
+ ******************************************************/
 function generateForests() {
     forests = [];
+    for (let y = 0; y < mapSize; y += 3) {
+        for (let x = 0; x < mapSize; x += 3) {
 
-    for (let i = 0; i < mapSize; i += 4) {
-        for (let j = 0; j < mapSize; j += 4) {
-            let h = heightMap[j][i];
+            let h = heightMap[y][x];
+
             if (h > 0.05 && h < 0.20) {
-                if (Math.random() < 0.15) {
-                    forests.push({ x: i, y: j });
-                }
+                if (Math.random() < 0.15) forests.push({ x, y });
             }
         }
     }
 }
 
-
-// ----------------------
-// 画森林
-// ----------------------
 function drawForests() {
-    ctx.fillStyle = "#3b7d2f";
-    forests.forEach(f => ctx.fillRect(f.x, f.y, 3, 3));
+    ctx.fillStyle = "#2b6122";
+    forests.forEach(f => ctx.fillRect(f.x, f.y, 2, 2));
 }
 
-
-// ----------------------
-// 道路系统（简化 A*）
-// ----------------------
+/******************************************************
+ * 道路（向首都发散）
+ ******************************************************/
 function generateRoads() {
     roads = [];
-
-    function distance(a, b) {
-        return Math.hypot(a.x - b.x, a.y - b.y);
-    }
 
     let sorted = [...cities].sort((a, b) => b.size - a.size);
     let capital = sorted[0];
 
-    // 连接每一座城市到首都
     cities.forEach(city => {
         if (city === capital) return;
 
@@ -277,32 +281,20 @@ function generateRoads() {
         let x = city.x;
         let y = city.y;
 
-        while (steps < 800) {
+        while (steps < 700) {
             steps++;
 
             path.push({ x, y });
 
             if (Math.hypot(x - capital.x, y - capital.y) < 3) break;
 
-            // 朝首都方向前进
-            let dx = capital.x - x;
-            let dy = capital.y - y;
-
-            let nx = x + Math.sign(dx);
-            let ny = y + Math.sign(dy);
-
-            x = nx;
-            y = ny;
+            x += Math.sign(capital.x - x);
+            y += Math.sign(capital.y - y);
         }
-
         roads.push(path);
     });
 }
 
-
-// ----------------------
-// 画道路
-// ----------------------
 function drawRoads() {
     ctx.strokeStyle = "#444";
     ctx.lineWidth = 2;
@@ -315,36 +307,33 @@ function drawRoads() {
     });
 }
 
-
-// ----------------------
-// 生成国家报告
-// ----------------------
+/******************************************************
+ * 报告
+ ******************************************************/
 function generateReport() {
     let box = document.getElementById("reportBox");
     box.innerHTML = `
         <h2>${nationData.name}</h2>
         <p><b>人口：</b>${nationData.population.toLocaleString()}</p>
-        <p><b>面积：</b>${nationData.area} 平方公里</p>
+        <p><b>面积：</b>${nationData.area} km²</p>
         <p><b>森林覆盖率：</b>${(nationData.forestCover * 100).toFixed(1)}%</p>
-        <p><b>道路总长度：</b>${nationData.roadLength.toFixed(1)} 公里</p>
-        <h3>国家发展分析</h3>
-        <p>该国城市主要分布在沿海和河流流域，交通路径呈放射状。</p>
-        <p>建议重点发展港口贸易、河运工业以及城市带状发展。</p>
+        <p><b>道路长度：</b>${nationData.roadLength.toFixed(1)} km</p>
+        <h3>发展分析</h3>
+        <p>该国拥有多样生物群系，气候带宽，适合农业与港口产业发展。</p>
     `;
     box.style.display = "block";
 }
 
-
-// ----------------------
-// 生成全部地图（主流程）
-// ----------------------
+/******************************************************
+ * 主流程
+ ******************************************************/
 function generateMap() {
     mapSize = Number(document.getElementById("mapSize").value);
     canvas.width = mapSize;
     canvas.height = mapSize;
 
     generateHeightMap();
-    renderHeightMap();
+    renderMap();
 
     generateRivers();
     drawRivers();
@@ -358,24 +347,16 @@ function generateMap() {
     generateRoads();
     drawRoads();
 
-    // 国家数据
     nationData.name = document.getElementById("nationName").value || "未命名国家";
     nationData.population = Math.floor((cities.length * 200000) + Math.random() * 5_000_000);
     nationData.area = Math.floor(mapSize * mapSize / 1000);
-    nationData.forestCover = forests.length / (mapSize * mapSize / 16);
-    nationData.roadLength = roads.length * 1.5; 
-
-    document.getElementById("nationInfo").innerHTML = `
-        <p><b>城市数：</b>${cities.length}</p>
-        <p><b>人口：</b>${nationData.population.toLocaleString()}</p>
-        <p><b>面积：</b>${nationData.area} km²</p>
-    `;
+    nationData.forestCover = forests.length / (mapSize * mapSize / 9);
+    nationData.roadLength = roads.length * 2;
 }
 
-
-// ----------------------
-// 保存为 PNG
-// ----------------------
+/******************************************************
+ * 保存 PNG
+ ******************************************************/
 function savePNG() {
     let link = document.createElement("a");
     link.download = `${nationData.name}.png`;
@@ -383,10 +364,9 @@ function savePNG() {
     link.click();
 }
 
-
-// ----------------------
-// 事件绑定
-// ----------------------
+/******************************************************
+ * 事件
+ ******************************************************/
 document.getElementById("generateBtn").onclick = generateMap;
 document.getElementById("regenBtn").onclick = generateMap;
 document.getElementById("reportBtn").onclick = generateReport;
