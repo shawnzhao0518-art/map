@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Random Nation Generator</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="container">
+
+    <!-- 左侧控制栏 -->
+    <aside class="sidebar glass">
+
+        <h2>国家生成器</h2>
+
+        <label>国家名称</label>
+        <input id="nationName" type="text" placeholder="例如：Shawnland">
+
+        <label>地图尺寸</label>
+        <select id="mapSize">
+            <option value="1024">1024 × 1024（超清）</option>
+            <option value="800">800 × 800（高品质）</option>
+            <option value="600">600 × 600（标准）</option>
+        </select>
+
+        <button id="generateBtn">生成国家</button>
+        <button id="regenBtn">重新生成地图</button>
+        <button id="reportBtn">生成报告</button>
+        <button id="saveBtn">保存为 PNG</button>
+
+        <hr>
+
+        <h3>国家信息</h3>
+        <div id="nationInfo"></div>
+    </aside>
+
+    <!-- 主地图区域 -->
+    <main class="main glass">
+        <canvas id="mapCanvas"></canvas>
+    </main>
+
+</div>
+
+<!-- 国家报告区 -->
+<div id="reportBox" class="report glass"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
