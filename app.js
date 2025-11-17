@@ -1,9 +1,10 @@
+window.addEventListener("DOMContentLoaded", () => {
+
 let canvas = document.getElementById("mapCanvas");
 let ctx = canvas.getContext("2d");
 
 let mapSize = 800;
 let heightMap = [];
-let rivers = [];
 let cities = [];
 let roads = [];
 
@@ -187,7 +188,7 @@ function drawRoads() {
     });
 }
 
-// ===== 主流程入口绑定 =====
+// ===== 主流程 =====
 function generateMap() {
     mapSize = Number(document.getElementById("mapSize").value);
     canvas.width = canvas.height = mapSize;
@@ -200,34 +201,32 @@ function generateMap() {
 
     nationData.name = document.getElementById("nationName").value || "未命名国家";
     nationData.population = Math.floor((cities.length * 300000) + Math.random() * 300000);
+
+    document.getElementById("nationInfo").innerHTML = `
+        <p><b>城市数：</b>${cities.length}</p>
+        <p><b>人口：</b>${nationData.population.toLocaleString()}</p>
+        <p><b>道路：</b>${roads.length}</p>
+    `;
 }
 
-window.onload = () => {
-    document.getElementById("generateBtn").addEventListener("click", generateMap);
-    document.getElementById("regenBtn").addEventListener("click", () => {
-        generateHeightMap();
-        renderHeightMap();
-        generateCities();
-        drawCities();
-        generateRoads();
-        drawRoads();
-    });
+// ===== 事件绑定 =====
+document.getElementById("generateBtn").addEventListener("click", generateMap);
+document.getElementById("regenBtn").addEventListener("click", generateMap);
+document.getElementById("reportBtn").addEventListener("click", () => {
+    const box = document.getElementById("reportBox");
+    box.innerHTML = `
+        <h2>${nationData.name}</h2>
+        <p>人口：${nationData.population.toLocaleString()}人</p>
+        <p>城市：${cities.length}座</p>
+        <p>道路：${roads.length}条</p>
+    `;
+    box.style.display = "block";
+});
+document.getElementById("saveBtn").addEventListener("click", () => {
+    const link = document.createElement("a");
+    link.download = `${nationData.name}.png`;
+    link.href = canvas.toDataURL();
+    link.click();
+});
 
-    document.getElementById("reportBtn").addEventListener("click", () => {
-        const reportBox = document.getElementById("reportBox");
-        reportBox.innerHTML = `
-          <h2>${nationData.name}</h2>
-          <p>人口：${nationData.population.toLocaleString()}人</p>
-          <p>城市数量：${cities.length}个</p>
-          <p>道路数量：${roads.length}条</p>
-        `;
-        reportBox.style.display = "block";
-    });
-
-    document.getElementById("saveBtn").addEventListener("click", () => {
-        const link = document.createElement("a");
-        link.download = `${nationData.name}.png`;
-        link.href = canvas.toDataURL();
-        link.click();
-    });
-};
+});
