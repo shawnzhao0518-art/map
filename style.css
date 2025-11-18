@@ -13,6 +13,86 @@ body {
 .container {
     display: flex;
     height: 100vh;
+}* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+}
+
+body {
+    background: linear-gradient(135deg, #dfe5ff, #f8fbff);
+    min-height: 100vh;
+}
+
+.container {
+    display: flex;
+    height: 100vh;
+}
+
+.sidebar {
+    width: 280px;
+    padding: 20px;
+    overflow-y: auto;
+}
+
+.main {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.glass {
+    background: rgba(255, 255, 255, 0.45);
+    backdrop-filter: blur(15px);
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+}
+
+.sidebar input,
+.sidebar select {
+    width: 100%;
+    padding: 10px 14px;
+    border-radius: 14px;
+    border: none;
+    margin-top: 6px;
+    margin-bottom: 16px;
+    background: rgba(255,255,255,0.8);
+}
+
+.sidebar button {
+    width: 100%;
+    padding: 14px;
+    margin-top: 12px;
+    border: none;
+    border-radius: 15px;
+    background: #3d6bff;
+    color: white;
+    font-size: 15px;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.sidebar button:hover {
+    opacity: 0.85;
+}
+
+#mapCanvas {
+    border-radius: 20px;
+    max-width: 95%;
+    max-height: 95%;
+}
+
+.report {
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    width: 420px;
+    height: 430px;
+    padding: 20px;
+    overflow-y: auto;
+    display: none;
 }
 
 .sidebar {
