@@ -460,7 +460,56 @@ roads.forEach(r => {
 
 - 事件
   ******************************************************/
-  document.getElementById(“generateBtn”).onclick = generateMap;
-  document.getElementById(“regenBtn”).onclick = generateMap;
-  document.getElementById(“reportBtn”).onclick = generateReport;
-  document.getElementById(“saveBtn”).onclick = savePNG;
+  // 初始化时检查元素是否存在
+  window.addEventListener(‘DOMContentLoaded’, () => {
+  const generateBtn = document.getElementById(“generateBtn”);
+  const regenBtn = document.getElementById(“regenBtn”);
+  const reportBtn = document.getElementById(“reportBtn”);
+  const saveBtn = document.getElementById(“saveBtn”);
+  
+  if (generateBtn) {
+  generateBtn.onclick = () => {
+  try {
+  generateMap();
+  } catch (error) {
+  console.error(“生成地图时出错:”, error);
+  alert(“生成地图时出错: “ + error.message);
+  }
+  };
+  }
+  
+  if (regenBtn) {
+  regenBtn.onclick = () => {
+  try {
+  generateMap();
+  } catch (error) {
+  console.error(“重新生成地图时出错:”, error);
+  alert(“重新生成地图时出错: “ + error.message);
+  }
+  };
+  }
+  
+  if (reportBtn) {
+  reportBtn.onclick = () => {
+  try {
+  generateReport();
+  } catch (error) {
+  console.error(“生成报告时出错:”, error);
+  alert(“生成报告时出错: “ + error.message);
+  }
+  };
+  }
+  
+  if (saveBtn) {
+  saveBtn.onclick = () => {
+  try {
+  savePNG();
+  } catch (error) {
+  console.error(“保存PNG时出错:”, error);
+  alert(“保存PNG时出错: “ + error.message);
+  }
+  };
+  }
+  
+  console.log(“事件监听器已注册”);
+  });
