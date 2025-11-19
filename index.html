@@ -1,48 +1,588 @@
 <!DOCTYPE html>
+
 <html lang="zh">
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>随机国家生成器（豪华版）</title>
-    <link rel="stylesheet" href="style.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+        }
+
+```
+    body {
+        background: linear-gradient(135deg, #dfe5ff, #f8fbff);
+        min-height: 100vh;
+    }
+
+    .container {
+        display: flex;
+        height: 100vh;
+    }
+
+    .sidebar {
+        width: 280px;
+        padding: 20px;
+        overflow-y: auto;
+        background: rgba(255, 255, 255, 0.45);
+        backdrop-filter: blur(15px);
+        border-radius: 20px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+        margin: 10px;
+    }
+
+    .main {
+        flex: 1;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background: rgba(255, 255, 255, 0.45);
+        backdrop-filter: blur(15px);
+        border-radius: 20px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+        margin: 10px;
+    }
+
+    .sidebar input,
+    .sidebar select {
+        width: 100%;
+        padding: 10px 14px;
+        border-radius: 14px;
+        border: none;
+        margin-top: 6px;
+        margin-bottom: 16px;
+        background: rgba(255,255,255,0.8);
+    }
+
+    .sidebar button {
+        width: 100%;
+        padding: 14px;
+        margin-top: 12px;
+        border: none;
+        border-radius: 15px;
+        background: #3d6bff;
+        color: white;
+        font-size: 15px;
+        cursor: pointer;
+        transition: 0.2s;
+    }
+
+    .sidebar button:hover {
+        opacity: 0.85;
+    }
+
+    #mapCanvas {
+        border-radius: 20px;
+        max-width: 95%;
+        max-height: 95%;
+    }
+
+    .report {
+        position: fixed;
+        right: 20px;
+        bottom: 20px;
+        width: 420px;
+        height: 430px;
+        padding: 20px;
+        overflow-y: auto;
+        display: none;
+        background: rgba(255, 255, 255, 0.45);
+        backdrop-filter: blur(15px);
+        border-radius: 20px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+    }
+
+    h2, h3 {
+        margin-bottom: 10px;
+    }
+
+    label {
+        font-weight: 600;
+        display: block;
+        margin-top: 10px;
+    }
+
+    hr {
+        margin: 20px 0;
+        border: none;
+        border-top: 1px solid rgba(0,0,0,0.1);
+    }
+</style>
+```
+
 </head>
 <body>
 
 <div class="container">
-
-    <aside class="sidebar glass">
-
+    <aside class="sidebar">
         <h2>国家生成器</h2>
 
-        <label>国家名称</label>
-        <input id="nationName" type="text" placeholder="例如：Shawnland">
+```
+    <label>国家名称</label>
+    <input id="nationName" type="text" placeholder="例如：Shawnland">
 
-        <label>地图尺寸</label>
-        <select id="mapSize">
-            <option value="1024">1024 × 1024（超清）</option>
-            <option value="800">800 × 800（高品质）</option>
-            <option value="600">600 × 600（标准）</option>
-        </select>
+    <label>地图尺寸</label>
+    <select id="mapSize">
+        <option value="1024">1024 × 1024（超清）</option>
+        <option value="800" selected>800 × 800（高品质）</option>
+        <option value="600">600 × 600（标准）</option>
+    </select>
 
-        <button id="generateBtn">生成国家</button>
-        <button id="regenBtn">重新生成地图</button>
-        <button id="reportBtn">生成报告</button>
-        <button id="saveBtn">保存为 PNG</button>
+    <button id="generateBtn">生成国家</button>
+    <button id="regenBtn">重新生成地图</button>
+    <button id="reportBtn">生成报告</button>
+    <button id="saveBtn">保存为 PNG</button>
 
-        <hr>
+    <hr>
 
-        <h3>国家信息</h3>
-        <div id="nationInfo"></div>
-    </aside>
+    <h3>国家信息</h3>
+    <div id="nationInfo">点击"生成国家"开始</div>
+</aside>
 
-    <main class="main glass">
-        <canvas id="mapCanvas"></canvas>
-    </main>
+<main class="main">
+    <canvas id="mapCanvas"></canvas>
+</main>
+```
 
 </div>
 
-<div id="reportBox" class="report glass"></div>
+<div id="reportBox" class="report"></div>
 
-<script src="app.js"></script>
+<script>
+/******************************************************
+ * 随机国家生成器（豪华版 + 生物群系）
+ ******************************************************/
+
+let canvas = document.getElementById("mapCanvas");
+let ctx = canvas.getContext("2d");
+
+let mapSize = 800;
+let heightMap = [];
+let tempMap = [];
+let rivers = [];
+let cities = [];
+let forests = [];
+let roads = [];
+
+const SEA_LEVEL_THRESHOLD = 0.02;
+
+let nationData = {
+    name: "",
+    population: 0,
+    area: 0,
+    forestCover: 0,
+    roadLength: 0
+};
+
+/******************************************************
+ * 陆地验证函数
+ ******************************************************/
+function isLand(x, y) {
+    if (x < 0 || y < 0 || x >= mapSize || y >= mapSize) return false;
+    return heightMap[y] && heightMap[y][x] >= SEA_LEVEL_THRESHOLD;
+}
+
+/******************************************************
+ * 正式 Perlin Noise（Ken Perlin 改良）
+ ******************************************************/
+let permutation = [];
+for (let i = 0; i < 256; i++) permutation[i] = i;
+for (let i = 255; i > 0; i--) {
+    let j = Math.floor(Math.random() * (i + 1));
+    [permutation[i], permutation[j]] = [permutation[j], permutation[i]];
+}
+let p = [...permutation, ...permutation];
+
+function fade(t) { return t * t * t * (t * (t * 6 - 15) + 10); }
+function lerp(t, a, b) { return a + t * (b - a); }
+function grad(hash, x, y) {
+    switch (hash & 3) {
+        case 0: return x + y;
+        case 1: return -x + y;
+        case 2: return x - y;
+        case 3: return -x - y;
+    }
+}
+function perlin(x, y) {
+    let X = Math.floor(x) & 255;
+    let Y = Math.floor(y) & 255;
+
+    x -= Math.floor(x);
+    y -= Math.floor(y);
+
+    let u = fade(x);
+    let v = fade(y);
+
+    let A = p[X] + Y;
+    let B = p[X + 1] + Y;
+
+    return lerp(v,
+        lerp(u, grad(p[A], x, y), grad(p[B], x - 1, y)),
+        lerp(u, grad(p[A + 1], x, y - 1), grad(p[B + 1], x - 1, y - 1))
+    );
+}
+
+/******************************************************
+ * 生成高度图 + 温度图
+ ******************************************************/
+function generateHeightMap() {
+    heightMap = [];
+    tempMap = [];
+
+    for (let y = 0; y < mapSize; y++) {
+        heightMap[y] = [];
+        tempMap[y] = [];
+
+        for (let x = 0; x < mapSize; x++) {
+
+            let nx = x / mapSize - 0.5;
+            let ny = y / mapSize - 0.5;
+
+            let e =
+                1.00 * perlin(nx * 3, ny * 3) +
+                0.50 * perlin(nx * 6, ny * 6) +
+                0.25 * perlin(nx * 12, ny * 12);
+
+            e = (e + 1) / 2;
+            let dist = Math.sqrt(nx * nx + ny * ny);
+            e = e - dist * 1.1;
+
+            heightMap[y][x] = e;
+
+            let t = 1 - Math.abs((y / mapSize) - 0.5) * 2;
+            tempMap[y][x] = t;
+        }
+    }
+}
+
+/******************************************************
+ * 生物群系颜色
+ ******************************************************/
+function biomeColor(h, t) {
+    if (h < SEA_LEVEL_THRESHOLD) return "#3fa0ff";
+
+    if (h < 0.05) {
+        if (t < 0.33) return "#cfe0d8";
+        if (t < 0.66) return "#8dd17d";
+        return "#5cd167";
+    }
+
+    if (h < 0.20) {
+        if (t < 0.33) return "#4d7c3b";
+        if (t < 0.66) return "#6dad5f";
+        return "#3aa549";
+    }
+
+    if (h < 0.35) return "#b5946d";
+
+    return "#ffffff";
+}
+
+/******************************************************
+ * 渲染地图（生物群系）
+ ******************************************************/
+function renderMap() {
+    for (let y = 0; y < mapSize; y++) {
+        for (let x = 0; x < mapSize; x++) {
+            let h = heightMap[y][x];
+            let t = tempMap[y][x];
+            ctx.fillStyle = biomeColor(h, t);
+            ctx.fillRect(x, y, 1, 1);
+        }
+    }
+}
+
+/******************************************************
+ * 河流生成
+ ******************************************************/
+function generateRivers() {
+    rivers = [];
+
+    for (let i = 0; i < 7; i++) {
+        let x = Math.floor(Math.random() * mapSize);
+        let y = Math.floor(Math.random() * mapSize);
+
+        if (heightMap[y][x] < 0.15) continue;
+
+        let river = [];
+        for (let j = 0; j < 900; j++) {
+            river.push({ x, y });
+
+            let bestX = x, bestY = y;
+            let bestH = heightMap[y][x];
+
+            for (let dy = -1; dy <= 1; dy++) {
+                for (let dx = -1; dx <= 1; dx++) {
+                    let nx = x + dx;
+                    let ny = y + dy;
+                    if (nx < 0 || ny < 0 || nx >= mapSize || ny >= mapSize) continue;
+
+                    let nh = heightMap[ny][nx];
+                    if (nh < bestH) {
+                        bestH = nh;
+                        bestX = nx;
+                        bestY = ny;
+                    }
+                }
+            }
+
+            x = bestX;
+            y = bestY;
+
+            if (heightMap[y][x] < SEA_LEVEL_THRESHOLD) break;
+        }
+
+        rivers.push(river);
+    }
+}
+
+function drawRivers() {
+    ctx.strokeStyle = "#2f76ff";
+    ctx.lineWidth = 2;
+
+    rivers.forEach(r => {
+        ctx.beginPath();
+        ctx.moveTo(r[0].x, r[0].y);
+        r.forEach(p => ctx.lineTo(p.x, p.y));
+        ctx.stroke();
+    });
+}
+
+/******************************************************
+ * 城市生成
+ ******************************************************/
+function generateCities() {
+    cities = [];
+
+    for (let i = 0; i < 15; i++) {
+        let tries = 0;
+        while (tries < 2000) {
+            tries++;
+
+            let x = Math.floor(Math.random() * mapSize);
+            let y = Math.floor(Math.random() * mapSize);
+            
+            if (!isLand(x, y)) continue;
+            
+            let h = heightMap[y][x];
+
+            if (h > 0.25) continue;
+
+            let nearSea = false;
+            for (let dy = -12; dy <= 12; dy++) {
+                for (let dx = -12; dx <= 12; dx++) {
+                    let nx = x + dx, ny = y + dy;
+                    if (nx < 0 || ny < 0 || nx >= mapSize || ny >= mapSize) continue;
+                    if (heightMap[ny][nx] < SEA_LEVEL_THRESHOLD) nearSea = true;
+                }
+            }
+
+            let nearRiver = rivers.some(r =>
+                r.some(p => Math.abs(p.x - x) < 8 && Math.abs(p.y - y) < 8)
+            );
+
+            if (!nearSea && !nearRiver) continue;
+
+            cities.push({ x, y, size: Math.random() });
+            break;
+        }
+    }
+}
+
+function drawCities() {
+    cities.forEach(c => {
+        ctx.fillStyle = c.size > 0.75 ? "#ff4f4f" :
+                        c.size > 0.45 ? "#ff8d3c" : "#ffd93c";
+
+        ctx.beginPath();
+        ctx.arc(c.x, c.y, 4 + c.size * 5, 0, Math.PI * 2);
+        ctx.fill();
+    });
+}
+
+/******************************************************
+ * 森林
+ ******************************************************/
+function generateForests() {
+    forests = [];
+    for (let y = 0; y < mapSize; y += 3) {
+        for (let x = 0; x < mapSize; x += 3) {
+            let h = heightMap[y][x];
+            if (h > 0.05 && h < 0.20) {
+                if (Math.random() < 0.15) forests.push({ x, y });
+            }
+        }
+    }
+}
+
+function drawForests() {
+    ctx.fillStyle = "#2b6122";
+    forests.forEach(f => ctx.fillRect(f.x, f.y, 2, 2));
+}
+
+/******************************************************
+ * 道路验证
+ ******************************************************/
+function pathIsValid(path) {
+    return path.every(p => isLand(p.x, p.y));
+}
+
+/******************************************************
+ * 道路生成
+ ******************************************************/
+function generateRoads() {
+    roads = [];
+
+    let sorted = [...cities].sort((a, b) => b.size - a.size);
+    let capital = sorted[0];
+    
+    if (!capital) return;
+
+    cities.forEach(city => {
+        if (city === capital) return;
+
+        let path = [];
+        let steps = 0;
+
+        let x = city.x;
+        let y = city.y;
+
+        while (steps < 700) {
+            steps++;
+
+            path.push({ x, y });
+
+            if (Math.hypot(x - capital.x, y - capital.y) < 3) break;
+
+            let nextX = x + Math.sign(capital.x - x);
+            let nextY = y + Math.sign(capital.y - y);
+            
+            if (!isLand(nextX, nextY)) {
+                let found = false;
+                for (let dy = -1; dy <= 1; dy++) {
+                    for (let dx = -1; dx <= 1; dx++) {
+                        if (dx === 0 && dy === 0) continue;
+                        let testX = x + dx;
+                        let testY = y + dy;
+                        if (isLand(testX, testY)) {
+                            nextX = testX;
+                            nextY = testY;
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (found) break;
+                }
+                if (!found) break;
+            }
+            
+            x = nextX;
+            y = nextY;
+        }
+        
+        if (pathIsValid(path) && path.length > 10) {
+            roads.push(path);
+        }
+    });
+}
+
+function drawRoads() {
+    ctx.strokeStyle = "#444";
+    ctx.lineWidth = 2;
+
+    roads.forEach(r => {
+        ctx.beginPath();
+        ctx.moveTo(r[0].x, r[0].y);
+        r.forEach(p => ctx.lineTo(p.x, p.y));
+        ctx.stroke();
+    });
+}
+
+/******************************************************
+ * 报告
+ ******************************************************/
+function generateReport() {
+    let box = document.getElementById("reportBox");
+    box.innerHTML = `
+        <h2>${nationData.name}</h2>
+        <p><b>人口：</b>${nationData.population.toLocaleString()}</p>
+        <p><b>面积：</b>${nationData.area} km²</p>
+        <p><b>森林覆盖率：</b>${(nationData.forestCover * 100).toFixed(1)}%</p>
+        <p><b>道路长度：</b>${nationData.roadLength.toFixed(1)} km</p>
+        <p><b>城市数量：</b>${cities.length}</p>
+        <p><b>道路数量：</b>${roads.length}</p>
+        <h3>发展分析</h3>
+        <p>该国拥有多样生物群系，气候带宽，适合农业与港口产业发展。</p>
+    `;
+    box.style.display = "block";
+}
+
+/******************************************************
+ * 主流程
+ ******************************************************/
+function generateMap() {
+    console.log("开始生成地图...");
+    
+    mapSize = Number(document.getElementById("mapSize").value);
+    canvas.width = mapSize;
+    canvas.height = mapSize;
+
+    generateHeightMap();
+    renderMap();
+
+    generateRivers();
+    drawRivers();
+
+    generateForests();
+    drawForests();
+
+    generateCities();
+    drawCities();
+
+    generateRoads();
+    drawRoads();
+
+    nationData.name = document.getElementById("nationName").value || "未命名国家";
+    nationData.population = Math.floor((cities.length * 200000) + Math.random() * 5_000_000);
+    nationData.area = Math.floor(mapSize * mapSize / 1000);
+    nationData.forestCover = forests.length / (mapSize * mapSize / 9);
+    nationData.roadLength = roads.length * 2;
+    
+    let infoDiv = document.getElementById("nationInfo");
+    infoDiv.innerHTML = `
+        <p><b>名称：</b>${nationData.name}</p>
+        <p><b>人口：</b>${nationData.population.toLocaleString()}</p>
+        <p><b>城市：</b>${cities.length} 座</p>
+        <p><b>道路：</b>${roads.length} 条</p>
+    `;
+    
+    console.log("地图生成完成！");
+}
+
+/******************************************************
+ * 保存 PNG
+ ******************************************************/
+function savePNG() {
+    let link = document.createElement("a");
+    link.download = `${nationData.name}.png`;
+    link.href = canvas.toDataURL("image/png");
+    link.click();
+}
+
+/******************************************************
+ * 事件绑定
+ ******************************************************/
+document.getElementById("generateBtn").addEventListener("click", generateMap);
+document.getElementById("regenBtn").addEventListener("click", generateMap);
+document.getElementById("reportBtn").addEventListener("click", generateReport);
+document.getElementById("saveBtn").addEventListener("click", savePNG);
+
+console.log("国家生成器已加载完成！");
+</script>
+
 </body>
 </html>
