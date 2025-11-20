@@ -1,10 +1,9 @@
 <!DOCTYPE html>
-
 <html lang="zh">
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>随机国家生成器（豪华版）</title>
+    <title>随机国家生成器（豪华版 - 增强版）</title>
     <style>
         * {
             margin: 0;
@@ -13,106 +12,104 @@
             font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
         }
 
-```
-    body {
-        background: linear-gradient(135deg, #dfe5ff, #f8fbff);
-        min-height: 100vh;
-    }
+        body {
+            background: linear-gradient(135deg, #dfe5ff, #f8fbff);
+            min-height: 100vh;
+        }
 
-    .container {
-        display: flex;
-        height: 100vh;
-    }
+        .container {
+            display: flex;
+            height: 100vh;
+        }
 
-    .sidebar {
-        width: 280px;
-        padding: 20px;
-        overflow-y: auto;
-        background: rgba(255, 255, 255, 0.45);
-        backdrop-filter: blur(15px);
-        border-radius: 20px;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.08);
-        margin: 10px;
-    }
+        .sidebar {
+            width: 280px;
+            padding: 20px;
+            overflow-y: auto;
+            background: rgba(255, 255, 255, 0.45);
+            backdrop-filter: blur(15px);
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            margin: 10px;
+        }
 
-    .main {
-        flex: 1;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        background: rgba(255, 255, 255, 0.45);
-        backdrop-filter: blur(15px);
-        border-radius: 20px;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.08);
-        margin: 10px;
-    }
+        .main {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.45);
+            backdrop-filter: blur(15px);
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            margin: 10px;
+        }
 
-    .sidebar input,
-    .sidebar select {
-        width: 100%;
-        padding: 10px 14px;
-        border-radius: 14px;
-        border: none;
-        margin-top: 6px;
-        margin-bottom: 16px;
-        background: rgba(255,255,255,0.8);
-    }
+        .sidebar input,
+        .sidebar select {
+            width: 100%;
+            padding: 10px 14px;
+            border-radius: 14px;
+            border: none;
+            margin-top: 6px;
+            margin-bottom: 16px;
+            background: rgba(255,255,255,0.8);
+        }
 
-    .sidebar button {
-        width: 100%;
-        padding: 14px;
-        margin-top: 12px;
-        border: none;
-        border-radius: 15px;
-        background: #3d6bff;
-        color: white;
-        font-size: 15px;
-        cursor: pointer;
-        transition: 0.2s;
-    }
+        .sidebar button {
+            width: 100%;
+            padding: 14px;
+            margin-top: 12px;
+            border: none;
+            border-radius: 15px;
+            background: #3d6bff;
+            color: white;
+            font-size: 15px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
 
-    .sidebar button:hover {
-        opacity: 0.85;
-    }
+        .sidebar button:hover {
+            opacity: 0.85;
+        }
 
-    #mapCanvas {
-        border-radius: 20px;
-        max-width: 95%;
-        max-height: 95%;
-    }
+        #mapCanvas {
+            border-radius: 20px;
+            max-width: 95%;
+            max-height: 95%;
+        }
 
-    .report {
-        position: fixed;
-        right: 20px;
-        bottom: 20px;
-        width: 420px;
-        max-height: 500px;
-        padding: 20px;
-        overflow-y: auto;
-        display: none;
-        background: rgba(255, 255, 255, 0.95);
-        backdrop-filter: blur(15px);
-        border-radius: 20px;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.08);
-    }
+        .report {
+            position: fixed;
+            right: 20px;
+            bottom: 20px;
+            width: 420px;
+            max-height: 500px;
+            padding: 20px;
+            overflow-y: auto;
+            display: none;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(15px);
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+        }
 
-    h2, h3 {
-        margin-bottom: 10px;
-    }
+        h2, h3 {
+            margin-bottom: 10px;
+        }
 
-    label {
-        font-weight: 600;
-        display: block;
-        margin-top: 10px;
-    }
+        label {
+            font-weight: 600;
+            display: block;
+            margin-top: 10px;
+        }
 
-    hr {
-        margin: 20px 0;
-        border: none;
-        border-top: 1px solid rgba(0,0,0,0.1);
-    }
-</style>
-```
+        hr {
+            margin: 20px 0;
+            border: none;
+            border-top: 1px solid rgba(0,0,0,0.1);
+        }
+    </style>
 
 </head>
 <body>
@@ -121,32 +118,30 @@
     <aside class="sidebar">
         <h2>国家生成器</h2>
 
-```
-    <label>国家名称</label>
-    <input id="nationName" type="text" placeholder="例如：Shawnland">
+        <label>国家名称</label>
+        <input id="nationName" type="text" placeholder="例如：Shawnland">
 
-    <label>地图尺寸</label>
-    <select id="mapSize">
-        <option value="1024">1024 × 1024（超清）</option>
-        <option value="800" selected>800 × 800（高品质）</option>
-        <option value="600">600 × 600（标准）</option>
-    </select>
+        <label>地图尺寸</label>
+        <select id="mapSize">
+            <option value="1024">1024 × 1024（超清）</option>
+            <option value="800" selected>800 × 800（高品质）</option>
+            <option value="600">600 × 600（标准）</option>
+        </select>
 
-    <button id="generateBtn">生成国家</button>
-    <button id="regenBtn">重新生成地图</button>
-    <button id="reportBtn">生成报告</button>
-    <button id="saveBtn">保存为 PNG</button>
+        <button id="generateBtn">生成国家</button>
+        <button id="regenBtn">重新生成地图</button>
+        <button id="reportBtn">生成报告</button>
+        <button id="saveBtn">保存为 PNG</button>
 
-    <hr>
+        <hr>
 
-    <h3>国家信息</h3>
-    <div id="nationInfo">点击"生成国家"开始</div>
-</aside>
+        <h3>国家信息</h3>
+        <div id="nationInfo">点击"生成国家"开始</div>
+    </aside>
 
-<main class="main">
-    <canvas id="mapCanvas"></canvas>
-</main>
-```
+    <main class="main">
+        <canvas id="mapCanvas"></canvas>
+    </main>
 
 </div>
 
@@ -154,7 +149,7 @@
 
 <script>
 /******************************************************
- * 随机国家生成器 - 完整连接版
+ * 随机国家生成器 - 完整连接版 (增强版)
  ******************************************************/
 
 let canvas = document.getElementById("mapCanvas");
@@ -188,7 +183,7 @@ function isLand(x, y) {
 }
 
 /******************************************************
- * Perlin Noise
+ * Perlin Noise (保持不变)
  ******************************************************/
 let permutation = [];
 for (let i = 0; i < 256; i++) permutation[i] = i;
@@ -224,7 +219,7 @@ function perlin(x, y) {
 }
 
 /******************************************************
- * 生成高度图
+ * 生成高度图 (保持不变)
  ******************************************************/
 function generateHeightMap() {
     heightMap = [];
@@ -250,7 +245,7 @@ function generateHeightMap() {
 }
 
 /******************************************************
- * 生物群系颜色
+ * 生物群系颜色 (保持不变)
  ******************************************************/
 function biomeColor(h, t) {
     if (h < SEA_LEVEL_THRESHOLD) return "#3fa0ff";
@@ -269,7 +264,7 @@ function biomeColor(h, t) {
 }
 
 /******************************************************
- * 渲染地图
+ * 渲染地图 (保持不变)
  ******************************************************/
 function renderMap() {
     for (let y = 0; y < mapSize; y++) {
@@ -283,7 +278,7 @@ function renderMap() {
 }
 
 /******************************************************
- * 河流
+ * 河流 (保持不变)
  ******************************************************/
 function generateRivers() {
     rivers = [];
@@ -329,7 +324,7 @@ function drawRivers() {
 }
 
 /******************************************************
- * 城市评分
+ * 城市评分 & 城市生成 (保持不变)
  ******************************************************/
 function calculateCityScore(x, y) {
     let score = 0;
@@ -367,9 +362,6 @@ function calculateCityScore(x, y) {
     return score;
 }
 
-/******************************************************
- * 城市生成
- ******************************************************/
 function generateCities() {
     cities = [];
     for (let i = 0; i < 15; i++) {
@@ -428,7 +420,7 @@ function drawCities() {
 }
 
 /******************************************************
- * 森林
+ * 森林 (保持不变)
  ******************************************************/
 function generateForests() {
     forests = [];
@@ -448,7 +440,7 @@ function drawForests() {
 }
 
 /******************************************************
- * 增强的道路生成算法 - 确保所有城市连接
+ * 增强的道路生成算法 - 允许桥梁
  ******************************************************/
 function generateRoads() {
     roads = [];
@@ -469,7 +461,7 @@ function generateRoads() {
                 to: capital,
                 success: true
             });
-            console.log(`✓ 城市${i}连接成功，路径长度: ${path.length}`);
+            // console.log(`✓ 城市${i}连接成功，路径长度: ${path.length}`);
         } else {
             roads.push({
                 path: [],
@@ -477,19 +469,20 @@ function generateRoads() {
                 to: capital,
                 success: false
             });
-            console.log(`✗ 城市${i}连接失败`);
+            // console.log(`✗ 城市${i}连接失败`);
         }
     }
 }
 
-// 改进的寻路算法 - 使用广度优先搜索确保找到路径
+// 改进的寻路算法 - 允许跨越水域 (桥梁)
 function findBestPath(start, end) {
-    const queue = [{x: start.x, y: start.y, path: [{x: start.x, y: start.y}]}];
+    // 队列中的元素包含：x, y, path数组
+    const queue = [{x: start.x, y: start.y, path: [{x: start.x, y: start.y, isBridge: false}]}];
     const visited = new Set();
     visited.add(`${start.x},${start.y}`);
     
-    const stepSize = 2; // 每次移动2像素，加快搜索
-    const maxIterations = 50000;
+    const stepSize = 2; // 每次移动2像素
+    const maxIterations = 100000; // 增加迭代次数以提高连通性
     let iterations = 0;
     
     while (queue.length > 0 && iterations < maxIterations) {
@@ -505,8 +498,8 @@ function findBestPath(start, end) {
             while (Math.abs(x - end.x) > 1 || Math.abs(y - end.y) > 1) {
                 x += Math.sign(end.x - x);
                 y += Math.sign(end.y - y);
-                if (isLand(x, y)) {
-                    finalPath.push({x, y});
+                if (x >= 0 && y >= 0 && x < mapSize && y < mapSize) {
+                    finalPath.push({x, y, isBridge: !isLand(x,y)});
                 }
             }
             return simplifyPath(finalPath);
@@ -531,34 +524,67 @@ function findBestPath(start, end) {
             const ny = current.y + dir.dy;
             const key = `${nx},${ny}`;
             
+            // 检查边界
+            if (nx < 0 || ny < 0 || nx >= mapSize || ny >= mapSize) continue;
             if (visited.has(key)) continue;
-            if (!isLand(nx, ny)) continue;
+            
+            const h = heightMap[ny][nx];
+            let isBridgePoint = false;
+
+            if (h < SEA_LEVEL_THRESHOLD) {
+                // 如果是水域，检查它是否为浅水区或河流（即：不位于深海）
+                // 允许短距离跨越水域，作为桥梁
+                
+                // 简单水域检查：不允许在大面积深海中移动。
+                // 检查周围一小块区域的平均高度
+                let avgH = 0;
+                let count = 0;
+                for(let dy=-1; dy<=1; dy++) {
+                    for(let dx=-stepSize; dx<=stepSize; dx++) {
+                        if (ny+dy >= 0 && nx+dx >= 0 && ny+dy < mapSize && nx+dx < mapSize) {
+                            avgH += heightMap[ny+dy][nx+dx];
+                            count++;
+                        }
+                    }
+                }
+                // 如果周围平均高度非常低（深海），则不允许通过
+                if (avgH / count < SEA_LEVEL_THRESHOLD * 0.5) { 
+                    continue;
+                }
+                isBridgePoint = true;
+            }
             
             visited.add(key);
             queue.push({
                 x: nx,
                 y: ny,
-                path: [...current.path, {x: nx, y: ny}]
+                path: [...current.path, {x: nx, y: ny, isBridge: isBridgePoint}]
             });
         }
     }
     
-    console.log(`寻路失败，迭代: ${iterations}`);
+    // console.log(`寻路失败，迭代: ${iterations}`);
     return null;
 }
 
-// 简化路径，减少点数
+// 简化路径，减少点数并保留 isBridge 标记
 function simplifyPath(path) {
     if (path.length < 3) return path;
     
     const simplified = [path[0]];
-    for (let i = 1; i < path.length - 1; i += 3) {
-        simplified.push(path[i]);
+    for (let i = 1; i < path.length - 1; i++) {
+        // 如果是桥梁点，一定要保留，避免桥梁路段被优化掉
+        if (path[i].isBridge || i % 3 === 0) { 
+            simplified.push(path[i]);
+        }
     }
     simplified.push(path[path.length - 1]);
     return simplified;
 }
 
+/******************************************************
+ * 渲染道路和桥梁
+ ******************************************************/
 function drawRoads() {
     ctx.lineWidth = 3;
     ctx.lineCap = "round";
@@ -566,6 +592,8 @@ function drawRoads() {
     
     roads.forEach((road) => {
         if (!road.success || road.path.length === 0) return;
+        
+        // 步骤 1: 绘制道路主体 (白色描边和黑色主体)
         
         // 白色描边
         ctx.strokeStyle = "#ffffff";
@@ -582,11 +610,59 @@ function drawRoads() {
         ctx.moveTo(road.path[0].x, road.path[0].y);
         road.path.forEach(p => ctx.lineTo(p.x, p.y));
         ctx.stroke();
+
+        // 步骤 2: 绘制桥梁标记
+        
+        let startBridge = null;
+        for (let i = 0; i < road.path.length; i++) {
+            const p = road.path[i];
+            
+            if (p.isBridge && startBridge === null) {
+                // 桥梁路段开始
+                startBridge = p;
+            } else if (!p.isBridge && startBridge !== null) {
+                // 桥梁路段结束，绘制桥梁标记
+                ctx.strokeStyle = "#0000ff"; // 桥梁标记颜色 (蓝色)
+                ctx.lineWidth = 1; 
+
+                ctx.beginPath();
+                ctx.moveTo(startBridge.x, startBridge.y);
+                ctx.lineTo(road.path[i-1].x, road.path[i-1].y);
+                ctx.stroke();
+                
+                // 在桥梁中央添加一个更明显的标记
+                let midX = (startBridge.x + road.path[i-1].x) / 2;
+                let midY = (startBridge.y + road.path[i-1].y) / 2;
+                ctx.fillStyle = "#0000ff";
+                ctx.beginPath();
+                ctx.arc(midX, midY, 3, 0, Math.PI * 2);
+                ctx.fill();
+                
+                startBridge = null;
+            }
+        }
+        // 处理路径末尾的桥梁路段
+        if (startBridge !== null) {
+            ctx.strokeStyle = "#0000ff";
+            ctx.lineWidth = 1;
+
+            ctx.beginPath();
+            ctx.moveTo(startBridge.x, startBridge.y);
+            ctx.lineTo(road.path[road.path.length - 1].x, road.path[road.path.length - 1].y);
+            ctx.stroke();
+
+            let midX = (startBridge.x + road.path[road.path.length - 1].x) / 2;
+            let midY = (startBridge.y + road.path[road.path.length - 1].y) / 2;
+            ctx.fillStyle = "#0000ff";
+            ctx.beginPath();
+            ctx.arc(midX, midY, 3, 0, Math.PI * 2);
+            ctx.fill();
+        }
     });
 }
 
 /******************************************************
- * 报告
+ * 报告 (保持不变)
  ******************************************************/
 function generateReport() {
     const successfulRoads = roads.filter(r => r.success).length;
@@ -612,13 +688,13 @@ function generateReport() {
         <hr>
         <h3>发展分析</h3>
         <p>该国拥有多样生物群系，气候带宽，适合农业与港口产业发展。</p>
-        ${connectivity < 100 ? '<p style="color: #ff6b6b;">部分城市因地形隔绝无法连接到首都。</p>' : '<p style="color: #51cf66;">所有城市均已成功连接到首都！</p>'}
+        ${connectivity < 100 ? '<p style="color: #ff6b6b;">仍有部分城市因地形隔绝或距离遥远而无法连接到首都。</p>' : '<p style="color: #51cf66;">所有城市均已成功连接到首都！</p>'}
     `;
     box.style.display = "block";
 }
 
 /******************************************************
- * 主流程
+ * 主流程 (保持不变)
  ******************************************************/
 function generateMap() {
     console.log("=== 开始生成地图 ===");
@@ -634,9 +710,9 @@ function generateMap() {
     generateForests();
     drawForests();
     generateCities();
-    generateRoads();
-    drawRoads();
-    drawCities();
+    generateRoads(); // 增强后的道路生成
+    drawRoads();     // 增强后的道路和桥梁渲染
+    drawCities();    // 最后渲染城市，确保它们在道路上方
 
     nationData.name = document.getElementById("nationName").value || "未命名国家";
     nationData.population = Math.floor((cities.length * 200000) + Math.random() * 5_000_000);
@@ -666,7 +742,7 @@ function generateMap() {
 }
 
 /******************************************************
- * 保存 PNG
+ * 保存 PNG (保持不变)
  ******************************************************/
 function savePNG() {
     let link = document.createElement("a");
@@ -676,13 +752,15 @@ function savePNG() {
 }
 
 /******************************************************
- * 事件绑定
+ * 事件绑定 (保持不变)
  ******************************************************/
 document.getElementById("generateBtn").addEventListener("click", generateMap);
 document.getElementById("regenBtn").addEventListener("click", generateMap);
 document.getElementById("reportBtn").addEventListener("click", generateReport);
 document.getElementById("saveBtn").addEventListener("click", savePNG);
 
+// 首次加载时运行一次
+generateMap();
 console.log("✓ 国家生成器已加载完成！");
 </script>
 
