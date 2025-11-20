@@ -79,20 +79,45 @@
             max-height: 95%;
         }
 
+        /* 增强的报告样式 - 居中和关闭按钮 */
         .report {
             position: fixed;
-            right: 20px;
-            bottom: 20px;
-            width: 420px;
-            max-height: 500px;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%); /* 居中核心 */
+            width: 450px; 
+            max-height: 90vh; 
             padding: 20px;
             overflow-y: auto;
             display: none;
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(15px);
             border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.15); 
+            z-index: 1000; 
         }
+
+        .report-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .report-close {
+            font-size: 30px;
+            font-weight: 300;
+            cursor: pointer;
+            line-height: 0.5;
+            color: #888;
+            padding: 5px;
+            transition: color 0.2s;
+        }
+
+        .report-close:hover {
+            color: #333;
+        }
+        /* 报告样式结束 */
 
         h2, h3 {
             margin-bottom: 10px;
@@ -533,7 +558,6 @@ function findBestPath(start, end) {
 
             if (h < SEA_LEVEL_THRESHOLD) {
                 // 如果是水域，检查它是否为浅水区或河流（即：不位于深海）
-                // 允许短距离跨越水域，作为桥梁
                 
                 // 简单水域检查：不允许在大面积深海中移动。
                 // 检查周围一小块区域的平均高度
@@ -583,7 +607,7 @@ function simplifyPath(path) {
 }
 
 /******************************************************
- * 渲染道路和桥梁
+ * 渲染道路和桥梁 (保持不变)
  ******************************************************/
 function drawRoads() {
     ctx.lineWidth = 3;
@@ -662,16 +686,42 @@ function drawRoads() {
 }
 
 /******************************************************
- * 报告 (保持不变)
+ * 报告 & 下载增强
  ******************************************************/
 function generateReport() {
     const successfulRoads = roads.filter(r => r.success).length;
     const totalRoads = cities.length - 1;
     const connectivity = totalRoads > 0 ? (successfulRoads / totalRoads * 100).toFixed(1) : 0;
     
+    // 生成报告文字内容
+    const reportTextContent = `
+国家：${nationData.name}
+人口：${nationData.population.toLocaleString()}
+面积：${nationData.area} km²
+森林覆盖率：${(nationData.forestCover * 100).toFixed(1)}%
+道路总长度：${nationData.roadLength.toFixed(1)} km
+城市数量：${cities.length} 座
+道路连接数：${successfulRoads}/${totalRoads} 条
+交通连通率：${connectivity}%
+
+=== 城市等级 ===
+首都：1 座
+大城市：${cities.filter(c => c.size > 0.75 && c !== nationData.capital).length} 座
+中等城市：${cities.filter(c => c.size > 0.45 && c.size <= 0.75).length} 座
+小城市：${cities.filter(c => c.size <= 0.45).length} 座
+
+=== 发展分析 ===
+该国拥有多样生物群系，气候带宽，适合农业与港口产业发展。
+${connectivity < 100 ? '仍有部分城市因地形隔绝或距离遥远而无法连接到首都。' : '所有城市均已成功连接到首都！'}
+    `.trim();
+
     let box = document.getElementById("reportBox");
     box.innerHTML = `
-        <h2>${nationData.name}</h2>
+        <div class="report-header">
+            <h2>${nationData.name} 报告</h2>
+            <span class="report-close" onclick="closeReport()">&times;</span>
+        </div>
+        
         <p><b>人口：</b>${nationData.population.toLocaleString()}</p>
         <p><b>面积：</b>${nationData.area} km²</p>
         <p><b>森林覆盖率：</b>${(nationData.forestCover * 100).toFixed(1)}%</p>
@@ -689,8 +739,42 @@ function generateReport() {
         <h3>发展分析</h3>
         <p>该国拥有多样生物群系，气候带宽，适合农业与港口产业发展。</p>
         ${connectivity < 100 ? '<p style="color: #ff6b6b;">仍有部分城市因地形隔绝或距离遥远而无法连接到首都。</p>' : '<p style="color: #51cf66;">所有城市均已成功连接到首都！</p>'}
+        <hr>
+        <button id="downloadReportBtn" class="sidebar button" style="margin-top: 5px;">下载综合报告 (PNG+TXT)</button>
     `;
     box.style.display = "block";
+    
+    // 绑定下载事件
+    document.getElementById("downloadReportBtn").addEventListener("click", () => {
+        downloadReport(reportTextContent);
+    });
+}
+
+/**
+ * 隐藏报告弹窗的函数
+ */
+function closeReport() {
+    document.getElementById("reportBox").style.display = "none";
+}
+
+/**
+ * 下载综合报告 (图片+文字)
+ */
+function downloadReport(textContent) {
+    // 1. 下载地图 PNG (调用已有的函数)
+    savePNG(); 
+    
+    // 2. 下载报告文字 TXT
+    const blob = new Blob([textContent], { type: "text/plain;charset=utf-8" });
+    const link = document.createElement("a");
+    link.download = `${nationData.name}_报告.txt`;
+    link.href = URL.createObjectURL(blob);
+    
+    // 使用 setTimeout 延迟下载 TXT，以避免和 PNG 下载冲突
+    setTimeout(() => {
+        link.click();
+        alert("地图 PNG 和报告 TXT 文件已开始下载。");
+    }, 500); 
 }
 
 /******************************************************
@@ -738,6 +822,9 @@ function generateMap() {
         </p>
     `;
     
+    // 隐藏报告，如果它正在显示
+    closeReport(); 
+
     console.log("=== 地图生成完成！ ===");
 }
 
@@ -752,12 +839,13 @@ function savePNG() {
 }
 
 /******************************************************
- * 事件绑定 (保持不变)
+ * 事件绑定
  ******************************************************/
 document.getElementById("generateBtn").addEventListener("click", generateMap);
 document.getElementById("regenBtn").addEventListener("click", generateMap);
 document.getElementById("reportBtn").addEventListener("click", generateReport);
 document.getElementById("saveBtn").addEventListener("click", savePNG);
+window.closeReport = closeReport; // 将 closeReport 函数添加到全局范围
 
 // 首次加载时运行一次
 generateMap();
