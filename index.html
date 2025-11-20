@@ -86,11 +86,11 @@
         right: 20px;
         bottom: 20px;
         width: 420px;
-        height: 430px;
+        max-height: 500px;
         padding: 20px;
         overflow-y: auto;
         display: none;
-        background: rgba(255, 255, 255, 0.45);
+        background: rgba(255, 255, 255, 0.95);
         backdrop-filter: blur(15px);
         border-radius: 20px;
         box-shadow: 0 10px 30px rgba(0,0,0,0.08);
@@ -154,7 +154,7 @@
 
 <script>
 /******************************************************
- * 随机国家生成器（豪华版 + 生物群系）
+ * 随机国家生成器 - 完整连接版
  ******************************************************/
 
 let canvas = document.getElementById("mapCanvas");
@@ -175,11 +175,12 @@ let nationData = {
     population: 0,
     area: 0,
     forestCover: 0,
-    roadLength: 0
+    roadLength: 0,
+    capital: null
 };
 
 /******************************************************
- * 陆地验证函数
+ * 陆地验证
  ******************************************************/
 function isLand(x, y) {
     if (x < 0 || y < 0 || x >= mapSize || y >= mapSize) return false;
@@ -187,7 +188,7 @@ function isLand(x, y) {
 }
 
 /******************************************************
- * 正式 Perlin Noise（Ken Perlin 改良）
+ * Perlin Noise
  ******************************************************/
 let permutation = [];
 for (let i = 0; i < 256; i++) permutation[i] = i;
@@ -210,16 +211,12 @@ function grad(hash, x, y) {
 function perlin(x, y) {
     let X = Math.floor(x) & 255;
     let Y = Math.floor(y) & 255;
-
     x -= Math.floor(x);
     y -= Math.floor(y);
-
     let u = fade(x);
     let v = fade(y);
-
     let A = p[X] + Y;
     let B = p[X + 1] + Y;
-
     return lerp(v,
         lerp(u, grad(p[A], x, y), grad(p[B], x - 1, y)),
         lerp(u, grad(p[A + 1], x, y - 1), grad(p[B + 1], x - 1, y - 1))
@@ -227,7 +224,7 @@ function perlin(x, y) {
 }
 
 /******************************************************
- * 生成高度图 + 温度图
+ * 生成高度图
  ******************************************************/
 function generateHeightMap() {
     heightMap = [];
@@ -236,23 +233,16 @@ function generateHeightMap() {
     for (let y = 0; y < mapSize; y++) {
         heightMap[y] = [];
         tempMap[y] = [];
-
         for (let x = 0; x < mapSize; x++) {
-
             let nx = x / mapSize - 0.5;
             let ny = y / mapSize - 0.5;
-
-            let e =
-                1.00 * perlin(nx * 3, ny * 3) +
-                0.50 * perlin(nx * 6, ny * 6) +
-                0.25 * perlin(nx * 12, ny * 12);
-
+            let e = 1.00 * perlin(nx * 3, ny * 3) +
+                    0.50 * perlin(nx * 6, ny * 6) +
+                    0.25 * perlin(nx * 12, ny * 12);
             e = (e + 1) / 2;
             let dist = Math.sqrt(nx * nx + ny * ny);
             e = e - dist * 1.1;
-
             heightMap[y][x] = e;
-
             let t = 1 - Math.abs((y / mapSize) - 0.5) * 2;
             tempMap[y][x] = t;
         }
@@ -264,26 +254,22 @@ function generateHeightMap() {
  ******************************************************/
 function biomeColor(h, t) {
     if (h < SEA_LEVEL_THRESHOLD) return "#3fa0ff";
-
     if (h < 0.05) {
         if (t < 0.33) return "#cfe0d8";
         if (t < 0.66) return "#8dd17d";
         return "#5cd167";
     }
-
     if (h < 0.20) {
         if (t < 0.33) return "#4d7c3b";
         if (t < 0.66) return "#6dad5f";
         return "#3aa549";
     }
-
     if (h < 0.35) return "#b5946d";
-
     return "#ffffff";
 }
 
 /******************************************************
- * 渲染地图（生物群系）
+ * 渲染地图
  ******************************************************/
 function renderMap() {
     for (let y = 0; y < mapSize; y++) {
@@ -297,30 +283,24 @@ function renderMap() {
 }
 
 /******************************************************
- * 河流生成
+ * 河流
  ******************************************************/
 function generateRivers() {
     rivers = [];
-
     for (let i = 0; i < 7; i++) {
         let x = Math.floor(Math.random() * mapSize);
         let y = Math.floor(Math.random() * mapSize);
-
         if (heightMap[y][x] < 0.15) continue;
-
         let river = [];
         for (let j = 0; j < 900; j++) {
             river.push({ x, y });
-
             let bestX = x, bestY = y;
             let bestH = heightMap[y][x];
-
             for (let dy = -1; dy <= 1; dy++) {
                 for (let dx = -1; dx <= 1; dx++) {
                     let nx = x + dx;
                     let ny = y + dy;
                     if (nx < 0 || ny < 0 || nx >= mapSize || ny >= mapSize) continue;
-
                     let nh = heightMap[ny][nx];
                     if (nh < bestH) {
                         bestH = nh;
@@ -329,13 +309,10 @@ function generateRivers() {
                     }
                 }
             }
-
             x = bestX;
             y = bestY;
-
             if (heightMap[y][x] < SEA_LEVEL_THRESHOLD) break;
         }
-
         rivers.push(river);
     }
 }
@@ -343,7 +320,6 @@ function generateRivers() {
 function drawRivers() {
     ctx.strokeStyle = "#2f76ff";
     ctx.lineWidth = 2;
-
     rivers.forEach(r => {
         ctx.beginPath();
         ctx.moveTo(r[0].x, r[0].y);
@@ -353,54 +329,101 @@ function drawRivers() {
 }
 
 /******************************************************
+ * 城市评分
+ ******************************************************/
+function calculateCityScore(x, y) {
+    let score = 0;
+    let h = heightMap[y][x];
+    if (h >= SEA_LEVEL_THRESHOLD && h < 0.10) score += 50;
+    else if (h < 0.20) score += 30;
+    else if (h < 0.30) score += 10;
+    
+    let nearSea = false;
+    let seaDistance = Infinity;
+    for (let dy = -15; dy <= 15; dy++) {
+        for (let dx = -15; dx <= 15; dx++) {
+            let nx = x + dx, ny = y + dy;
+            if (nx < 0 || ny < 0 || nx >= mapSize || ny >= mapSize) continue;
+            if (heightMap[ny][nx] < SEA_LEVEL_THRESHOLD) {
+                nearSea = true;
+                let dist = Math.sqrt(dx*dx + dy*dy);
+                seaDistance = Math.min(seaDistance, dist);
+            }
+        }
+    }
+    if (nearSea) {
+        score += 40 + Math.max(0, 20 - seaDistance);
+    }
+    
+    let nearRiver = false;
+    rivers.forEach(r => {
+        r.forEach(p => {
+            let dist = Math.sqrt((p.x - x)**2 + (p.y - y)**2);
+            if (dist < 10) nearRiver = true;
+        });
+    });
+    if (nearRiver) score += 30;
+    
+    return score;
+}
+
+/******************************************************
  * 城市生成
  ******************************************************/
 function generateCities() {
     cities = [];
-
     for (let i = 0; i < 15; i++) {
-        let tries = 0;
-        while (tries < 2000) {
-            tries++;
-
+        let bestScore = -1;
+        let bestCity = null;
+        for (let attempt = 0; attempt < 500; attempt++) {
             let x = Math.floor(Math.random() * mapSize);
             let y = Math.floor(Math.random() * mapSize);
-            
             if (!isLand(x, y)) continue;
-            
             let h = heightMap[y][x];
-
             if (h > 0.25) continue;
-
-            let nearSea = false;
-            for (let dy = -12; dy <= 12; dy++) {
-                for (let dx = -12; dx <= 12; dx++) {
-                    let nx = x + dx, ny = y + dy;
-                    if (nx < 0 || ny < 0 || nx >= mapSize || ny >= mapSize) continue;
-                    if (heightMap[ny][nx] < SEA_LEVEL_THRESHOLD) nearSea = true;
-                }
+            let tooClose = cities.some(c => Math.sqrt((c.x - x)**2 + (c.y - y)**2) < 30);
+            if (tooClose) continue;
+            let score = calculateCityScore(x, y);
+            if (score > bestScore) {
+                bestScore = score;
+                bestCity = { x, y, score };
             }
-
-            let nearRiver = rivers.some(r =>
-                r.some(p => Math.abs(p.x - x) < 8 && Math.abs(p.y - y) < 8)
-            );
-
-            if (!nearSea && !nearRiver) continue;
-
-            cities.push({ x, y, size: Math.random() });
-            break;
         }
+        if (bestCity) cities.push(bestCity);
     }
+    cities.forEach(c => {
+        c.size = Math.min(1, c.score / 150);
+    });
 }
 
 function drawCities() {
-    cities.forEach(c => {
-        ctx.fillStyle = c.size > 0.75 ? "#ff4f4f" :
-                        c.size > 0.45 ? "#ff8d3c" : "#ffd93c";
-
-        ctx.beginPath();
-        ctx.arc(c.x, c.y, 4 + c.size * 5, 0, Math.PI * 2);
-        ctx.fill();
+    cities.forEach((c, index) => {
+        if (index === 0) {
+            ctx.fillStyle = "#ff0000";
+            ctx.strokeStyle = "#ffffff";
+            ctx.lineWidth = 3;
+            let size = 12;
+            ctx.beginPath();
+            for (let i = 0; i < 5; i++) {
+                let angle = (i * 4 * Math.PI / 5) - Math.PI / 2;
+                let x = c.x + size * Math.cos(angle);
+                let y = c.y + size * Math.sin(angle);
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+        } else {
+            ctx.fillStyle = c.size > 0.75 ? "#ff4f4f" :
+                            c.size > 0.45 ? "#ff8d3c" : "#ffd93c";
+            ctx.strokeStyle = "#ffffff";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(c.x, c.y, 4 + c.size * 5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+        }
     });
 }
 
@@ -412,8 +435,8 @@ function generateForests() {
     for (let y = 0; y < mapSize; y += 3) {
         for (let x = 0; x < mapSize; x += 3) {
             let h = heightMap[y][x];
-            if (h > 0.05 && h < 0.20) {
-                if (Math.random() < 0.15) forests.push({ x, y });
+            if (h > 0.05 && h < 0.20 && Math.random() < 0.15) {
+                forests.push({ x, y });
             }
         }
     }
@@ -425,79 +448,139 @@ function drawForests() {
 }
 
 /******************************************************
- * 道路验证
- ******************************************************/
-function pathIsValid(path) {
-    return path.every(p => isLand(p.x, p.y));
-}
-
-/******************************************************
- * 道路生成
+ * 增强的道路生成算法 - 确保所有城市连接
  ******************************************************/
 function generateRoads() {
     roads = [];
-
-    let sorted = [...cities].sort((a, b) => b.size - a.size);
-    let capital = sorted[0];
+    if (cities.length === 0) return;
     
-    if (!capital) return;
+    const capital = cities[0];
+    nationData.capital = capital;
+    
+    // 为每个城市生成道路
+    for (let i = 1; i < cities.length; i++) {
+        const city = cities[i];
+        const path = findBestPath(city, capital);
+        
+        if (path && path.length > 0) {
+            roads.push({
+                path: path,
+                from: city,
+                to: capital,
+                success: true
+            });
+            console.log(`✓ 城市${i}连接成功，路径长度: ${path.length}`);
+        } else {
+            roads.push({
+                path: [],
+                from: city,
+                to: capital,
+                success: false
+            });
+            console.log(`✗ 城市${i}连接失败`);
+        }
+    }
+}
 
-    cities.forEach(city => {
-        if (city === capital) return;
-
-        let path = [];
-        let steps = 0;
-
-        let x = city.x;
-        let y = city.y;
-
-        while (steps < 700) {
-            steps++;
-
-            path.push({ x, y });
-
-            if (Math.hypot(x - capital.x, y - capital.y) < 3) break;
-
-            let nextX = x + Math.sign(capital.x - x);
-            let nextY = y + Math.sign(capital.y - y);
-            
-            if (!isLand(nextX, nextY)) {
-                let found = false;
-                for (let dy = -1; dy <= 1; dy++) {
-                    for (let dx = -1; dx <= 1; dx++) {
-                        if (dx === 0 && dy === 0) continue;
-                        let testX = x + dx;
-                        let testY = y + dy;
-                        if (isLand(testX, testY)) {
-                            nextX = testX;
-                            nextY = testY;
-                            found = true;
-                            break;
-                        }
-                    }
-                    if (found) break;
+// 改进的寻路算法 - 使用广度优先搜索确保找到路径
+function findBestPath(start, end) {
+    const queue = [{x: start.x, y: start.y, path: [{x: start.x, y: start.y}]}];
+    const visited = new Set();
+    visited.add(`${start.x},${start.y}`);
+    
+    const stepSize = 2; // 每次移动2像素，加快搜索
+    const maxIterations = 50000;
+    let iterations = 0;
+    
+    while (queue.length > 0 && iterations < maxIterations) {
+        iterations++;
+        const current = queue.shift();
+        
+        // 到达目标
+        if (Math.abs(current.x - end.x) < 10 && Math.abs(current.y - end.y) < 10) {
+            // 添加最后几步直接到达首都
+            const finalPath = [...current.path];
+            let x = current.x;
+            let y = current.y;
+            while (Math.abs(x - end.x) > 1 || Math.abs(y - end.y) > 1) {
+                x += Math.sign(end.x - x);
+                y += Math.sign(end.y - y);
+                if (isLand(x, y)) {
+                    finalPath.push({x, y});
                 }
-                if (!found) break;
             }
-            
-            x = nextX;
-            y = nextY;
+            return simplifyPath(finalPath);
         }
         
-        if (pathIsValid(path) && path.length > 10) {
-            roads.push(path);
+        // 8个方向探索
+        const directions = [
+            {dx: -stepSize, dy: -stepSize}, {dx: 0, dy: -stepSize}, {dx: stepSize, dy: -stepSize},
+            {dx: -stepSize, dy: 0},                                  {dx: stepSize, dy: 0},
+            {dx: -stepSize, dy: stepSize},  {dx: 0, dy: stepSize},  {dx: stepSize, dy: stepSize}
+        ];
+        
+        // 按照接近目标的顺序排序方向（启发式）
+        directions.sort((a, b) => {
+            const distA = Math.abs((current.x + a.dx) - end.x) + Math.abs((current.y + a.dy) - end.y);
+            const distB = Math.abs((current.x + b.dx) - end.x) + Math.abs((current.y + b.dy) - end.y);
+            return distA - distB;
+        });
+        
+        for (const dir of directions) {
+            const nx = current.x + dir.dx;
+            const ny = current.y + dir.dy;
+            const key = `${nx},${ny}`;
+            
+            if (visited.has(key)) continue;
+            if (!isLand(nx, ny)) continue;
+            
+            visited.add(key);
+            queue.push({
+                x: nx,
+                y: ny,
+                path: [...current.path, {x: nx, y: ny}]
+            });
         }
-    });
+    }
+    
+    console.log(`寻路失败，迭代: ${iterations}`);
+    return null;
+}
+
+// 简化路径，减少点数
+function simplifyPath(path) {
+    if (path.length < 3) return path;
+    
+    const simplified = [path[0]];
+    for (let i = 1; i < path.length - 1; i += 3) {
+        simplified.push(path[i]);
+    }
+    simplified.push(path[path.length - 1]);
+    return simplified;
 }
 
 function drawRoads() {
-    ctx.strokeStyle = "#444";
-    ctx.lineWidth = 2;
-
-    roads.forEach(r => {
+    ctx.lineWidth = 3;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    
+    roads.forEach((road) => {
+        if (!road.success || road.path.length === 0) return;
+        
+        // 白色描边
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 5;
         ctx.beginPath();
-        ctx.moveTo(r[0].x, r[0].y);
-        r.forEach(p => ctx.lineTo(p.x, p.y));
+        ctx.moveTo(road.path[0].x, road.path[0].y);
+        road.path.forEach(p => ctx.lineTo(p.x, p.y));
+        ctx.stroke();
+        
+        // 黑色主体
+        ctx.strokeStyle = "#333333";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(road.path[0].x, road.path[0].y);
+        road.path.forEach(p => ctx.lineTo(p.x, p.y));
         ctx.stroke();
     });
 }
@@ -506,17 +589,30 @@ function drawRoads() {
  * 报告
  ******************************************************/
 function generateReport() {
+    const successfulRoads = roads.filter(r => r.success).length;
+    const totalRoads = cities.length - 1;
+    const connectivity = totalRoads > 0 ? (successfulRoads / totalRoads * 100).toFixed(1) : 0;
+    
     let box = document.getElementById("reportBox");
     box.innerHTML = `
         <h2>${nationData.name}</h2>
         <p><b>人口：</b>${nationData.population.toLocaleString()}</p>
         <p><b>面积：</b>${nationData.area} km²</p>
         <p><b>森林覆盖率：</b>${(nationData.forestCover * 100).toFixed(1)}%</p>
-        <p><b>道路长度：</b>${nationData.roadLength.toFixed(1)} km</p>
-        <p><b>城市数量：</b>${cities.length}</p>
-        <p><b>道路数量：</b>${roads.length}</p>
+        <p><b>道路总长度：</b>${nationData.roadLength.toFixed(1)} km</p>
+        <p><b>城市数量：</b>${cities.length} 座</p>
+        <p><b>道路连接数：</b>${successfulRoads}/${totalRoads} 条</p>
+        <p><b>交通连通率：</b>${connectivity}%</p>
+        <hr>
+        <h3>城市等级</h3>
+        <p><b>首都：</b>1 座</p>
+        <p><b>大城市：</b>${cities.filter(c => c.size > 0.75 && c !== nationData.capital).length} 座</p>
+        <p><b>中等城市：</b>${cities.filter(c => c.size > 0.45 && c.size <= 0.75).length} 座</p>
+        <p><b>小城市：</b>${cities.filter(c => c.size <= 0.45).length} 座</p>
+        <hr>
         <h3>发展分析</h3>
         <p>该国拥有多样生物群系，气候带宽，适合农业与港口产业发展。</p>
+        ${connectivity < 100 ? '<p style="color: #ff6b6b;">部分城市因地形隔绝无法连接到首都。</p>' : '<p style="color: #51cf66;">所有城市均已成功连接到首都！</p>'}
     `;
     box.style.display = "block";
 }
@@ -525,7 +621,7 @@ function generateReport() {
  * 主流程
  ******************************************************/
 function generateMap() {
-    console.log("开始生成地图...");
+    console.log("=== 开始生成地图 ===");
     
     mapSize = Number(document.getElementById("mapSize").value);
     canvas.width = mapSize;
@@ -533,34 +629,40 @@ function generateMap() {
 
     generateHeightMap();
     renderMap();
-
     generateRivers();
     drawRivers();
-
     generateForests();
     drawForests();
-
     generateCities();
-    drawCities();
-
     generateRoads();
     drawRoads();
+    drawCities();
 
     nationData.name = document.getElementById("nationName").value || "未命名国家";
     nationData.population = Math.floor((cities.length * 200000) + Math.random() * 5_000_000);
     nationData.area = Math.floor(mapSize * mapSize / 1000);
     nationData.forestCover = forests.length / (mapSize * mapSize / 9);
-    nationData.roadLength = roads.length * 2;
+    
+    let totalRoadLength = 0;
+    roads.forEach(r => {
+        if (r.success) totalRoadLength += r.path.length;
+    });
+    nationData.roadLength = totalRoadLength * 0.1;
+    
+    const successfulRoads = roads.filter(r => r.success).length;
     
     let infoDiv = document.getElementById("nationInfo");
     infoDiv.innerHTML = `
         <p><b>名称：</b>${nationData.name}</p>
         <p><b>人口：</b>${nationData.population.toLocaleString()}</p>
         <p><b>城市：</b>${cities.length} 座</p>
-        <p><b>道路：</b>${roads.length} 条</p>
+        <p><b>已连接：</b>${successfulRoads}/${cities.length - 1} 条</p>
+        <p style="color: ${successfulRoads === cities.length - 1 ? '#51cf66' : '#ff6b6b'};">
+            <b>连通率：</b>${((successfulRoads / Math.max(1, cities.length - 1)) * 100).toFixed(1)}%
+        </p>
     `;
     
-    console.log("地图生成完成！");
+    console.log("=== 地图生成完成！ ===");
 }
 
 /******************************************************
@@ -581,7 +683,7 @@ document.getElementById("regenBtn").addEventListener("click", generateMap);
 document.getElementById("reportBtn").addEventListener("click", generateReport);
 document.getElementById("saveBtn").addEventListener("click", savePNG);
 
-console.log("国家生成器已加载完成！");
+console.log("✓ 国家生成器已加载完成！");
 </script>
 
 </body>
